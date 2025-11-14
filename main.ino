@@ -44,8 +44,8 @@ enum Game { MENU,
 
 Game currentGame = MENU;
 
-const char* games[] = { "Pong", "Snake", "Tetris", "Space Runner", "Italian Plumber", "Pocket Animals", "CHANGE THEME" };
-int TOTAL_SELECTIONS = 7;
+const char* games[] = { "Pong", "Snake", "Tetris", "Space Runner", "CHANGE THEME" };
+int TOTAL_SELECTIONS = 5;
 int selectedGame = 0;
 
 void drawMenu(bool blink = false) {
@@ -258,7 +258,7 @@ void updatePong() {
   tft.drawLine(SCREEN_WIDTH - 25, 0, SCREEN_WIDTH - 25, SCREEN_HEIGHT, FG2_Colour);
 
   // Draw ball and paddles
-  tft.fillRect((int)ballX, (int)ballY, BALL_SIZE, BALL_SIZE, FG2_Colour);
+  tft.fillRect((int)ballX, (int)ballY, BALL_SIZE, BALL_SIZE, FG1_Colour);
   tft.fillRect(paddle1X, paddle1Y, PADDLE_WIDTH, PADDLE_HEIGHT, FG1_Colour);
   tft.fillRect(paddle2X, paddle2Y, PADDLE_WIDTH, PADDLE_HEIGHT, FG1_Colour);
 
@@ -389,10 +389,10 @@ void updateSnake() {
   delay(100);
 }
 
-
 // ================== TETRIS ==================
-#define BLOCK_SIZE 18
-#define TETRIS_ROWS (SCREEN_HEIGHT / BLOCK_SIZE)
+
+#define BLOCK_SIZE 20
+#define TETRIS_ROWS ((SCREEN_HEIGHT / BLOCK_SIZE) - 2)
 #define TETRIS_COLS (SCREEN_WIDTH / BLOCK_SIZE)
 int tetrisGrid[TETRIS_ROWS][TETRIS_COLS] = { 0 };
 int prevTetrisGrid[TETRIS_ROWS][TETRIS_COLS] = { 0 };
@@ -415,7 +415,15 @@ const int shapes[7][4][4] = {
   { { 0, 0, 1, 0 }, { 1, 1, 1, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 } }   // J
 };
 
-const uint16_t shapeColors[7] = { tft.color565(73, 182, 169), tft.color565(170, 8, 21), tft.color565(1, 165, 138), tft.color565(236, 54, 125), tft.color565(250, 234, 3), tft.color565(253, 201, 18), tft.color565(61, 155, 225) };
+const uint16_t shapeColors[7] = { tft.color565(0, 119, 211), tft.color565(253, 63, 89), tft.color565(83, 218, 63), tft.color565(120, 37, 111), tft.color565(255, 200, 46), tft.color565(255, 145, 12), tft.color565(46, 46, 132) };
+
+bool tetrisGameOver = false;
+
+static int prevScore = -1;
+static int prevNextShape = -1;
+static int prevNextColor = -1;
+
+const int Y_OFFSET = BLOCK_SIZE * 2;  // visual shift in pixels
 
 void setupTetris() {
   tetrisX = TETRIS_COLS / 2 - 2;
@@ -432,6 +440,8 @@ void setupTetris() {
   prevY = -1;
   lastDrawX = -1;
   lastDrawY = -1;
+  prevScore = -1;
+  tetrisGameOver = false;
   memset(lastDrawShape, 0, sizeof(lastDrawShape));
 }
 
@@ -482,33 +492,49 @@ void clearLines() {
 }
 
 void drawTetris() {
-  static int prevScore = -1;
-  static int prevNextShape = -1;
-  static int prevNextColor = -1;
 
-  const int Y_OFFSET = 20;  // visual shift in pixels
+  if (tetrisGameOver) {
+    // Game Over screen
+    tft.setTextSize(3);
+    tft.setTextColor(FG1_Colour);
+    tft.setCursor(50, SCREEN_HEIGHT / 2 - 40);
+    tft.print("GAME OVER");
+
+    tft.setTextSize(2);
+    tft.setCursor(SCREEN_WIDTH / 2 - 50, SCREEN_HEIGHT / 2 + 20);
+    tft.print("Press X");
+    tft.setCursor(SCREEN_WIDTH / 2 - 50, SCREEN_HEIGHT / 2 + 40);
+    tft.print("to restart");
+
+    // Wait for ENTER to restart
+    if (digitalRead(BUTTON_ENTER) == LOW) {
+      setupTetris();
+      tetrisGameOver = false;
+    }
+    return;
+  }
 
   // --- Draw border around playfield ---
   tft.drawRect(0, Y_OFFSET, TETRIS_COLS * BLOCK_SIZE, TETRIS_ROWS * BLOCK_SIZE, FG2_Colour);
 
   // --- 1) Erase old falling shape ---
-  if (lastDrawX != -1 && lastDrawY != -1) {
-    for (int i = 0; i < 4; i++) {
-      for (int j = 0; j < 4; j++) {
-        if (lastDrawShape[i][j]) {
-          int gx = lastDrawX + j;
-          int gy = lastDrawY + i;
-          if (gx >= 0 && gx < TETRIS_COLS && gy >= 0 && gy < TETRIS_ROWS) {
-            if (!tetrisGrid[gy][gx]) {
-              int px = gx * BLOCK_SIZE;
-              int py = gy * BLOCK_SIZE + Y_OFFSET;
-              tft.fillRect(px, py, BLOCK_SIZE, BLOCK_SIZE, BG_Colour);
-            }
+
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      if (lastDrawShape[i][j]) {
+        int gx = lastDrawX + j;
+        int gy = lastDrawY + i;
+        if (gx >= 0 && gx < TETRIS_COLS && gy >= 0 && gy < TETRIS_ROWS) {
+          if (!tetrisGrid[gy][gx]) {
+            int px = gx * BLOCK_SIZE;
+            int py = gy * BLOCK_SIZE + Y_OFFSET;
+            tft.fillRect(px, py, BLOCK_SIZE, BLOCK_SIZE, BG_Colour);
           }
         }
       }
     }
   }
+
 
   // --- 2) Draw only static grid cells that changed ---
   for (int r = 0; r < TETRIS_ROWS; r++) {
@@ -550,30 +576,13 @@ void drawTetris() {
 
   // --- 5) Update HUD only when needed ---
   if (tetrisScore != prevScore) {
-    tft.fillRect(TETRIS_COLS * BLOCK_SIZE + 5, 5, 70, 16, BG_Colour);
+    tft.fillRect(0, 0, SCREEN_WIDTH, Y_OFFSET, BG_Colour);
     tft.setTextColor(FG1_Colour, BG_Colour);
     tft.setTextSize(2);
     tft.setCursor(TETRIS_COLS * BLOCK_SIZE + 5, 5);
     tft.print("Score:");
     tft.print(tetrisScore);
     prevScore = tetrisScore;
-  }
-
-  if (nextShapeIdx != prevNextShape || nextColor != prevNextColor) {
-    // clear preview area
-    tft.fillRect(TETRIS_COLS * BLOCK_SIZE + 5, 40, 50, 50, BG_Colour);
-    for (int i = 0; i < 4; i++) {
-      for (int j = 0; j < 4; j++) {
-        if (shapes[nextShapeIdx][i][j]) {
-          int sx = TETRIS_COLS * BLOCK_SIZE + 5 + j * (BLOCK_SIZE / 2);
-          int sy = 40 + i * (BLOCK_SIZE / 2);
-          tft.fillRect(sx + 1, sy + 1, BLOCK_SIZE / 2 - 2, BLOCK_SIZE / 2 - 2, nextColor);
-          tft.drawRect(sx, sy, BLOCK_SIZE / 2, BLOCK_SIZE / 2, FG1_Colour);
-        }
-      }
-    }
-    prevNextShape = nextShapeIdx;
-    prevNextColor = nextColor;
   }
 }
 
@@ -582,9 +591,8 @@ void updateTetris() {
   if (checkReturnToMenu()) return;
 
   unsigned long current = millis();
-  int speed = 500 - min(tetrisScore * 10, 400);  // speed up as score increases
+  int speed = 500 - min(tetrisScore * 2, 400);
 
-  // --- 1) Handle inputs (move & rotate) ---
   if (digitalRead(BUTTON_LEFT) == LOW) {
     if (!checkCollision(tetrisX - 1, tetrisY, tetrisShape)) tetrisX--;
   }
@@ -628,8 +636,9 @@ void updateTetris() {
       if (checkCollision(tetrisX, tetrisY, tetrisShape)) {
         memset(tetrisGrid, 0, sizeof(tetrisGrid));
         invalidatePrevGrid();
-        memset(prevTetrisGrid, 0, sizeof(prevTetrisGrid));
         tetrisScore = 0;
+        tft.fillScreen(BG_Colour);
+        tetrisGameOver = true;
       }
     }
   }
@@ -638,10 +647,11 @@ void updateTetris() {
   drawTetris();
 }
 
+
 // ================== Themes ================
 
 int theme = 0;
-int total_themes = 4;
+int total_themes = 7;
 
 void cycleThemes() {
   theme = (theme + 1) % total_themes;
@@ -656,15 +666,30 @@ void cycleThemes() {
       FG1_Colour = tft.color565(199, 157, 215);
       FG2_Colour = tft.color565(239, 79, 145);
       break;
-    case 2:
+    case 6:
       BG_Colour = tft.color565(53, 20, 62);
-      FG1_Colour = tft.color565(137, 183, 208);
       FG2_Colour = tft.color565(100, 79, 156);
+      FG1_Colour = tft.color565(137, 183, 208);
       break;
     case 3:
       BG_Colour = tft.color565(13, 43, 69);
-      FG1_Colour = tft.color565(141, 105, 122);
-      FG2_Colour = tft.color565(255, 170, 94);
+      FG2_Colour = tft.color565(141, 105, 122);
+      FG1_Colour = tft.color565(255, 170, 94);
+      break;
+    case 2:
+      BG_Colour = tft.color565(51, 23, 5);
+      FG2_Colour = tft.color565(191, 94, 59);
+      FG1_Colour = tft.color565(236, 182, 75);
+      break;
+    case 5:
+      BG_Colour = tft.color565(20, 20, 20);
+      FG2_Colour = tft.color565(100, 100, 100);
+      FG1_Colour = tft.color565(180, 180, 180);
+      break;
+    case 4:
+      BG_Colour = tft.color565(124, 8, 0);
+      FG2_Colour = tft.color565(216, 40, 0);
+      FG1_Colour = tft.color565(252, 152, 56);
       break;
   }
 }
@@ -888,145 +913,6 @@ void drawArcade() {
   delay(20);
 }
 
-// ================== Platformer ============
-
-// =========================
-// PLATFORMER GAME
-// =========================
-
-// ---- Player sprite palette (RGB565) ----
-uint16_t platformerPalette[] = {
-  ST77XX_BLACK,   // 0 = transparent / empty
-  ST77XX_RED,     // 1 = body
-  ST77XX_YELLOW,  // 2 = face
-  ST77XX_BLUE,    // 3 = clothing
-  ST77XX_WHITE    // 4 = highlight
-};
-
-// ---- Micro-pixel size ----
-const int px = 3;
-
-// ---- Hardcoded sprite map ----
-// (values correspond to palette indices)
-//
-// 12 × 12 pixel sprite (each pixel = 3x3 on screen)
-// You can modify this to change how the player looks.
-const uint8_t playerSprite[12][12] = {
-  {0,0,0,1,1,1,0,0,0,0,0,0},   // hat top
-  {0,0,1,1,1,1,1,0,0,0,0,0},   // hat brim
-  {0,4,2,2,2,2,2,4,0,0,0,0},   // face + hair
-  {0,4,2,5,2,5,2,4,0,0,0,0},   // face with eyes
-  {0,4,2,4,4,4,2,4,0,0,0,0},   // mustache
-  {0,1,1,1,1,1,1,1,0,0,0,0},   // red shirt/chest
-  {1,1,3,1,1,1,3,1,1,0,0,0},   // shirt + overall straps
-  {1,3,3,3,3,3,3,3,3,1,0,0},   // overalls body
-  {0,3,3,3,3,3,3,3,3,0,0,0},   // overalls lower
-  {0,4,4,0,0,0,0,4,4,0,0,0},   // shoes
-  {0,4,4,0,0,0,0,4,4,0,0,0},   // shoes (second row)
-  {0,0,0,0,0,0,0,0,0,0,0,0}
-};
-struct PlatformerPlayer {
-  float x, y;
-  float vx, vy;
-  int width = 12 * px;
-  int height = 12 * px;
-  bool onGround = false;
-} p;
-
-// Basic ground level
-int groundY = 120;
-
-// =========================
-// INITIALIZATION
-// =========================
-void setupPlatformer() {
-  p.x = 40;
-  p.y = groundY - p.height;
-  p.vx = 0;
-  p.vy = 0;
-}
-
-// =========================
-// UPDATE LOGIC
-// =========================
-void updatePlatformer() {
-
-  if (checkReturnToMenu()) return;
-
-  // Horizontal movement
-  if (digitalRead(BUTTON_LEFT) == LOW) {
-    p.vx = -1.5;
-  } else if (digitalRead(BUTTON_RIGHT) == LOW) {
-    p.vx = 1.5;
-  } else {
-    p.vx *= 0.85;  // friction
-  }
-
-  // Jump
-  if (digitalRead(BUTTON_UP) == LOW && p.onGround) {
-    p.vy = -4.0;
-    p.onGround = false;
-  }
-
-  // Gravity
-  p.vy += 0.20;
-  if (p.vy > 4) p.vy = 4;
-
-  // Apply movement
-  p.x += p.vx;
-  p.y += p.vy;
-
-  // Ground collision
-  if (p.y + p.height >= groundY) {
-    p.y = groundY - p.height;
-    p.vy = 0;
-    p.onGround = true;
-  }
-
-  // Screen bounds
-  if (p.x < 0) p.x = 0;
-  if (p.x + p.width > tft.width()) p.x = tft.width() - p.width;
-
-  drawPlatformer();
-}
-
-// =========================
-// DRAW SPRITE FUNCTION
-// =========================
-void drawPlayerPlatformer() {
-
-  for (int row = 0; row < 12; row++) {
-    for (int col = 0; col < 12; col++) {
-
-      uint8_t colorIndex = playerSprite[row][col];
-
-      if (colorIndex == 0) continue;  // transparent
-
-      uint16_t color = platformerPalette[colorIndex];
-
-      tft.fillRect(
-        p.x + col * px,
-        p.y + row * px,
-        px,
-        px,
-        color);
-    }
-  }
-}
-
-// =========================
-// MAIN DRAW FUNCTION
-// =========================
-void drawPlatformer() {
-  tft.fillScreen(BG_Colour);
-
-  // Draw ground
-  tft.fillRect(0, groundY, tft.width(), 4, FG2_Colour);
-
-  drawPlayerPlatformer();
-}
-
-
 // ================== Main ==================
 
 unsigned long blinkTimer = 0;
@@ -1039,8 +925,6 @@ void setup() {
   tft.fillScreen(BG_Colour);
   tft.invertDisplay(false);
   setupButtons();
-  nextShapeIdx = -1;
-  nextColor = 0;
   drawMenu();
 }
 
@@ -1087,7 +971,7 @@ void loop() {
               setupTetris();
               currentGame = TETRIS;
               break;
-            case 6:
+            case 4:
               cycleThemes();
               tft.fillScreen(BG_Colour);
               drawMenu(blinkState);
@@ -1095,10 +979,6 @@ void loop() {
             case 3:
               setupArcade();
               currentGame = ARCADE;
-              break;
-            case 4:
-              setupPlatformer();
-              currentGame = PLATFORMER;
               break;
           }
           delay(200);
@@ -1109,6 +989,5 @@ void loop() {
     case SNAKE: updateSnake(); break;
     case TETRIS: updateTetris(); break;
     case ARCADE: updateArcade(); break;
-    case PLATFORMER: updatePlatformer(); break;
   }
 }
