@@ -71,7 +71,7 @@ void drawMenu(bool blink = false) {
 // ========== Exit to Menu system ==========
 unsigned long enterPressStart = 0;
 bool enterHeld = false;
-const unsigned long HOLD_DURATION = 1000;  // 1 second
+const unsigned long HOLD_DURATION = 1000; 
 
 bool checkReturnToMenu() {
   if (digitalRead(BUTTON_ENTER) == LOW) {
@@ -96,7 +96,7 @@ bool checkReturnToMenu() {
       return true;
     }
   } else {
-    enterHeld = false;  // Reset if released early
+    enterHeld = false;
   }
   return false;
 }
@@ -152,8 +152,6 @@ void updatePong() {
     return;
   }
 
-  // ------------------ Paddle Controls ------------------
-  // Player 1 (top paddle) LEFT/RIGHT using UP/DOWN buttons
   if (digitalRead(BUTTON_UP) == LOW) {
     paddle1X -= paddleSpeed;
     if (paddle1X < 0) paddle1X = 0;
@@ -163,7 +161,6 @@ void updatePong() {
     if (paddle1X > SCREEN_WIDTH - PADDLE_WIDTH - 25) paddle1X = SCREEN_WIDTH - PADDLE_WIDTH - 25;
   }
 
-  // Player 2 (bottom paddle) LEFT/RIGHT using LEFT/RIGHT buttons
   if (digitalRead(BUTTON_LEFT) == LOW) {
     paddle2X -= paddleSpeed;
     if (paddle2X < 0) paddle2X = 0;
@@ -178,30 +175,25 @@ void updatePong() {
   if (prevPaddle1X != paddle1X) tft.fillRect(prevPaddle1X, paddle1Y, PADDLE_WIDTH, PADDLE_HEIGHT, BG_Colour);
   if (prevPaddle2X != paddle2X) tft.fillRect(prevPaddle2X, paddle2Y, PADDLE_WIDTH, PADDLE_HEIGHT, BG_Colour);
 
-  // ------------------ Ball Movement ------------------
   ballX += ballSpeedX;
   ballY += ballSpeedY;
 
-  // Bounce off side walls
   if (ballX <= 0 || ballX >= SCREEN_WIDTH - 25 - BALL_SIZE) ballSpeedX = -ballSpeedX;
 
-  // Paddle collisions
-  // Top paddle
+
   if ((ballY <= paddle1Y + PADDLE_HEIGHT) && (ballY >= paddle1Y) && (ballX + BALL_SIZE >= paddle1X) && (ballX <= paddle1X + PADDLE_WIDTH)) {
     ballY = paddle1Y + PADDLE_HEIGHT;
     ballSpeedY = -ballSpeedY * speedMultiplier;
     if (abs(ballSpeedY) > 8) ballSpeedY = (ballSpeedY > 0 ? 8 : -8);
   }
 
-  // Bottom paddle
   if ((ballY + BALL_SIZE >= paddle2Y) && (ballY + BALL_SIZE <= paddle2Y + PADDLE_HEIGHT) && (ballX + BALL_SIZE >= paddle2X) && (ballX <= paddle2X + PADDLE_WIDTH)) {
     ballY = paddle2Y - BALL_SIZE;
     ballSpeedY = -ballSpeedY * speedMultiplier;
     if (abs(ballSpeedY) > 8) ballSpeedY = (ballSpeedY > 0 ? 8 : -8);
   }
 
-  // ------------------ Scoring ------------------
-  if (ballY < 0) {  // Player 2 scores
+  if (ballY < 0) { 
     score2++;
     ballX = SCREEN_WIDTH / 2.0;
     ballY = SCREEN_HEIGHT / 2.0;
@@ -212,7 +204,7 @@ void updatePong() {
     ballSpeedX = random(0, 2) == 0 ? 3.0 : -3.0;
     ballSpeedY = 3.0;
   }
-  if (ballY > SCREEN_HEIGHT + BALL_SIZE) {  // Player 1 scores
+  if (ballY > SCREEN_HEIGHT + BALL_SIZE) { 
     score1++;
     ballX = SCREEN_WIDTH / 2.0;
     ballY = SCREEN_HEIGHT / 2.0;
@@ -224,7 +216,6 @@ void updatePong() {
     ballSpeedY = -3.0;
   }
 
-  // ------------------ Check Game Over ------------------
   if (score1 >= WINNING_SCORE || score2 >= WINNING_SCORE) {
     pongGameOver = true;
 
@@ -240,10 +231,9 @@ void updatePong() {
     tft.print("Press X");
     tft.setCursor(30, SCREEN_HEIGHT / 2 + 40);
     tft.print("to play again");
-    return;  // Stop drawing ball/paddles
+    return;
   }
 
-  // ------------------ Draw Scores ------------------
   tft.setRotation(1);
   tft.setTextSize(2);
   tft.setTextColor(FG1_Colour, BG_Colour);
@@ -253,16 +243,13 @@ void updatePong() {
   tft.print(score2);
   tft.setRotation(0);
 
-  // Draw middle lines
   tft.drawLine(0, SCREEN_HEIGHT / 2, SCREEN_WIDTH - 25, SCREEN_HEIGHT / 2, FG2_Colour);
   tft.drawLine(SCREEN_WIDTH - 25, 0, SCREEN_WIDTH - 25, SCREEN_HEIGHT, FG2_Colour);
 
-  // Draw ball and paddles
   tft.fillRect((int)ballX, (int)ballY, BALL_SIZE, BALL_SIZE, FG1_Colour);
   tft.fillRect(paddle1X, paddle1Y, PADDLE_WIDTH, PADDLE_HEIGHT, FG1_Colour);
   tft.fillRect(paddle2X, paddle2Y, PADDLE_WIDTH, PADDLE_HEIGHT, FG1_Colour);
 
-  // Update previous positions
   prevBallX = ballX;
   prevBallY = ballY;
   prevPaddle1X = paddle1X;
@@ -309,7 +296,6 @@ void setupSnake() {
 void updateSnake() {
   if (checkReturnToMenu()) return;
 
-  // If game over, show screen and wait for restart
   if (snakeGameOver) {
     tft.setTextSize(2);
     tft.setTextColor(FG1_Colour, BG_Colour);
@@ -327,13 +313,11 @@ void updateSnake() {
     return;
   }
 
-  // ------------------ Controls ------------------
   if (digitalRead(BUTTON_UP) == LOW && snakeDir != 2) snakeDir = 0;
   if (digitalRead(BUTTON_RIGHT) == LOW && snakeDir != 3) snakeDir = 1;
   if (digitalRead(BUTTON_DOWN) == LOW && snakeDir != 0) snakeDir = 2;
   if (digitalRead(BUTTON_LEFT) == LOW && snakeDir != 1) snakeDir = 3;
 
-  // ------------------ Move Snake ------------------
   for (int i = snakeLength - 1; i > 0; i--) {
     snakeX[i] = snakeX[i - 1];
     snakeY[i] = snakeY[i - 1];
@@ -343,19 +327,16 @@ void updateSnake() {
   else if (snakeDir == 2) snakeY[0]++;
   else snakeX[0]--;
 
-  // Wrap-around
   if (snakeX[0] < 0) snakeX[0] = SNAKE_COLS - 1;
   if (snakeX[0] >= SNAKE_COLS) snakeX[0] = 0;
   if (snakeY[0] < 0) snakeY[0] = SNAKE_ROWS - 1;
   if (snakeY[0] >= SNAKE_ROWS) snakeY[0] = 0;
 
-  // ------------------ Eat Food ------------------
   if (snakeX[0] == snakeFoodX && snakeY[0] == snakeFoodY) {
     snakeLength++;
     spawnSnakeFood();
   }
 
-  // ------------------ Check Self-Collision ------------------
   for (int i = 1; i < snakeLength; i++) {
     if (snakeX[0] == snakeX[i] && snakeY[0] == snakeY[i]) {
       snakeGameOver = true;
@@ -363,7 +344,6 @@ void updateSnake() {
     }
   }
 
-  // ------------------ Draw Snake ------------------
   for (int i = 0; i < snakeLength; i++) {
     if (prevSnakeX[i] != snakeX[i] || prevSnakeY[i] != snakeY[i]) {
       tft.fillRect(prevSnakeX[i] * SNAKE_BLOCK, 24 + prevSnakeY[i] * SNAKE_BLOCK, SNAKE_BLOCK, SNAKE_BLOCK, BG_Colour);
@@ -373,17 +353,14 @@ void updateSnake() {
     }
   }
 
-  // Draw food
   tft.fillRect(snakeFoodX * SNAKE_BLOCK, 24 + snakeFoodY * SNAKE_BLOCK, SNAKE_BLOCK, SNAKE_BLOCK, FG2_Colour);
 
-  // Draw score
   tft.setTextSize(2);
   tft.setTextColor(FG1_Colour, BG_Colour);
   tft.setCursor(5, 5);
   tft.print("Score: ");
   tft.print(snakeLength - 5);
 
-  // Draw top line
   tft.drawLine(0, 24, SCREEN_WIDTH, 24, FG2_Colour);
 
   delay(100);
@@ -423,7 +400,7 @@ static int prevScore = -1;
 static int prevNextShape = -1;
 static int prevNextColor = -1;
 
-const int Y_OFFSET = BLOCK_SIZE * 2;  // visual shift in pixels
+const int Y_OFFSET = BLOCK_SIZE * 2; 
 
 void setupTetris() {
   tetrisX = TETRIS_COLS / 2 - 2;
@@ -458,11 +435,10 @@ bool checkCollision(int x, int y, int shape[4][4]) {
   return false;
 }
 
-// Force full redraw by making prevTetrisGrid contain a sentinel
 void invalidatePrevGrid() {
   for (int i = 0; i < TETRIS_ROWS; i++)
     for (int j = 0; j < TETRIS_COLS; j++)
-      prevTetrisGrid[i][j] = -1;  // -1 will never match a valid color or 0
+      prevTetrisGrid[i][j] = -1;
 }
 
 
@@ -494,7 +470,6 @@ void clearLines() {
 void drawTetris() {
 
   if (tetrisGameOver) {
-    // Game Over screen
     tft.setTextSize(3);
     tft.setTextColor(FG1_Colour);
     tft.setCursor(50, SCREEN_HEIGHT / 2 - 40);
@@ -506,7 +481,6 @@ void drawTetris() {
     tft.setCursor(SCREEN_WIDTH / 2 - 50, SCREEN_HEIGHT / 2 + 40);
     tft.print("to restart");
 
-    // Wait for ENTER to restart
     if (digitalRead(BUTTON_ENTER) == LOW) {
       setupTetris();
       tetrisGameOver = false;
@@ -514,10 +488,7 @@ void drawTetris() {
     return;
   }
 
-  // --- Draw border around playfield ---
   tft.drawRect(0, Y_OFFSET, TETRIS_COLS * BLOCK_SIZE, TETRIS_ROWS * BLOCK_SIZE, FG2_Colour);
-
-  // --- 1) Erase old falling shape ---
 
   for (int i = 0; i < 4; i++) {
     for (int j = 0; j < 4; j++) {
@@ -535,8 +506,6 @@ void drawTetris() {
     }
   }
 
-
-  // --- 2) Draw only static grid cells that changed ---
   for (int r = 0; r < TETRIS_ROWS; r++) {
     for (int c = 0; c < TETRIS_COLS; c++) {
       if (tetrisGrid[r][c] != prevTetrisGrid[r][c]) {
@@ -553,7 +522,6 @@ void drawTetris() {
     }
   }
 
-  // --- 3) Draw current falling piece ---
   for (int i = 0; i < 4; i++) {
     for (int j = 0; j < 4; j++) {
       if (tetrisShape[i][j]) {
@@ -569,12 +537,10 @@ void drawTetris() {
     }
   }
 
-  // --- 4) Save last drawn shape for next erase ---
   memcpy(lastDrawShape, tetrisShape, sizeof(lastDrawShape));
   lastDrawX = tetrisX;
   lastDrawY = tetrisY;
 
-  // --- 5) Update HUD only when needed ---
   if (tetrisScore != prevScore) {
     tft.fillRect(0, 0, SCREEN_WIDTH, Y_OFFSET, BG_Colour);
     tft.setTextColor(FG1_Colour, BG_Colour);
@@ -611,17 +577,16 @@ void updateTetris() {
 
     for (int i = 0; i < 4; i++)
       for (int j = 0; j < 4; j++)
-        tetrisShape[j][3 - i] = temp[i][j];  // rotate
+        tetrisShape[j][3 - i] = temp[i][j]; 
 
     if (checkCollision(tetrisX, tetrisY, tetrisShape))
-      memcpy(tetrisShape, temp, sizeof(temp));  // undo if blocked
+      memcpy(tetrisShape, temp, sizeof(temp));  
 
-    delay(100);  // debounce rotation
+    delay(100);  
   }
 
-  delay(50);  // small input delay to prevent jitter
+  delay(50);  
 
-  // --- 2) Gravity (piece falling) ---
   if (current - tetrisLastFall > speed) {
     tetrisLastFall = current;
 
@@ -632,7 +597,6 @@ void updateTetris() {
       clearLines();
       setupTetris();
 
-      // game over check
       if (checkCollision(tetrisX, tetrisY, tetrisShape)) {
         memset(tetrisGrid, 0, sizeof(tetrisGrid));
         invalidatePrevGrid();
@@ -642,8 +606,6 @@ void updateTetris() {
       }
     }
   }
-
-  // --- 3) Draw everything once per frame ---
   drawTetris();
 }
 
@@ -694,18 +656,18 @@ void cycleThemes() {
   }
 }
 
-// ================== ARCADE (Operius-like) ==================
+// ================== ARCADE (SpaceRunner) ==================
 
 #define MAX_STARS 40
 
 bool gameOver = false;
-unsigned long arcadeStartTime = 0;  // when the game starts
+unsigned long arcadeStartTime = 0; 
 int score = 0;
 
 #define MAX_HILLS 10
 struct Hill {
-  float x;  // horizontal position
-  float z;  // depth from horizon, 70 → 0
+  float x;
+  float z;  
 };
 Hill hills[MAX_HILLS];
 unsigned long lastHillSpawn = 0;
@@ -716,7 +678,6 @@ const int horizonY = SCREEN_HEIGHT - 100;
 void updateHills() {
   unsigned long current = millis();
 
-  // Spawn a new hill if timer elapsed
   if (current - lastHillSpawn > HILL_SPAWN_INTERVAL) {
     lastHillSpawn = current;
     for (int i = 0; i < MAX_HILLS; i++) {
@@ -731,18 +692,17 @@ void updateHills() {
     }
   }
 
-  // Update hills z-position
   for (int i = 0; i < MAX_HILLS; i++) {
-    if (hills[i].z > 0) hills[i].z -= 2;  // move smoothly towards 0
+    if (hills[i].z > 0) hills[i].z -= 2; 
   }
 }
 
 void drawHills() {
   for (int i = 0; i < MAX_HILLS; i++) {
     if (hills[i].z > 0) {
-      float size = map(hills[i].z, 100, 0, 5, 35);  // size grows as z → 0
+      float size = map(hills[i].z, 100, 0, 5, 35);  
       int x = hills[i].x;
-      int y = horizonY + (100 - hills[i].z);  // y position above horizon
+      int y = horizonY + (100 - hills[i].z); 
       tft.fillTriangle(x, y - (1.5 * size), x - size, y, x + size, y, FG2_Colour);
     }
   }
@@ -756,12 +716,11 @@ struct Star {
 Star stars[MAX_STARS];
 
 float shipX, shipY;
-float shipAngle;  // tilt angle in radians
+float shipAngle; 
 float shipVelX, shipVelY;
 float thrustPower = 0.15;
-float friction = 0.95;  // friction for smooth movement
+float friction = 0.95;  
 
-// Colors
 uint16_t shipColor, starColor;
 
 void setupArcade() {
@@ -776,17 +735,14 @@ void setupArcade() {
   shipColor = FG1_Colour;
   starColor = FG2_Colour;
 
-  // Initialize stars
   for (int i = 0; i < MAX_STARS; i++) {
     stars[i].x = random(SCREEN_WIDTH);
     stars[i].y = random(SCREEN_HEIGHT) + 20;
     stars[i].speed = 0.5 + random(10) / 5.0;
   }
 
-  // Reset hills
   memset(hills, 0, sizeof(hills));
 
-  // Reset game state
   gameOver = false;
   score = 0;
   arcadeStartTime = millis();
@@ -796,13 +752,13 @@ void setupArcade() {
 
 
 bool checkShipHillCollision() {
-  if (gameOver) return false;  // ignore if already over
+  if (gameOver) return false; 
 
   for (int i = 0; i < MAX_HILLS; i++) {
-    if (hills[i].z > 5 && hills[i].z < 10) {  // collision only when close
+    if (hills[i].z > 5 && hills[i].z < 10) {  
       float hillSize = map(hills[i].z, 100, 0, 5, 35);
       if (shipX > hills[i].x - hillSize && shipX < hills[i].x + hillSize) {
-        gameOver = true;  // trigger game over
+        gameOver = true; 
         tft.fillScreen(BG_Colour);
         return true;
       }
@@ -815,26 +771,21 @@ void updateArcade() {
   if (checkReturnToMenu()) return;
 
   if (!gameOver) {
-    // --- Ship input ---
     if (digitalRead(BUTTON_LEFT) == LOW) shipVelX -= 0.3;
     if (digitalRead(BUTTON_RIGHT) == LOW) shipVelX += 0.3;
 
-    // Apply velocity and friction
     shipX += shipVelX;
     shipY += shipVelY;
     shipVelX *= friction;
     shipVelY *= friction;
 
-    // Clamp ship inside screen
     if (shipX < 10) shipX = 10;
     if (shipX > SCREEN_WIDTH - 10) shipX = SCREEN_WIDTH - 10;
     if (shipY < 10) shipY = 10;
     if (shipY > SCREEN_HEIGHT - 20) shipY = SCREEN_HEIGHT - 20;
 
-    // Tilt ship
     shipAngle = shipVelX * 0.2;
 
-    // Update stars & hills
     for (int i = 0; i < MAX_STARS; i++) {
       stars[i].y += stars[i].speed;
       if (stars[i].y > SCREEN_HEIGHT - 100) {
@@ -844,12 +795,10 @@ void updateArcade() {
     }
     updateHills();
 
-    // Check collision
     if (checkShipHillCollision()) {
       tft.fillScreen(BG_Colour);
     }
   } else {
-    // Game Over screen
     tft.setTextSize(3);
     tft.setTextColor(FG1_Colour);
     tft.setCursor(50, SCREEN_HEIGHT / 2 - 40);
@@ -861,10 +810,9 @@ void updateArcade() {
     tft.setCursor(SCREEN_WIDTH / 2 - 50, SCREEN_HEIGHT / 2 + 40);
     tft.print("to restart");
 
-    // Wait for ENTER to restart
     if (digitalRead(BUTTON_ENTER) == LOW) {
-      setupArcade();                    // reset everything
-      memset(hills, 0, sizeof(hills));  // clear hills
+      setupArcade();                    
+      memset(hills, 0, sizeof(hills));  
       gameOver = false;
     }
     return;
@@ -876,27 +824,21 @@ void updateArcade() {
 void drawArcade() {
   const int horizonY = SCREEN_HEIGHT - 100;
 
-  // Clear screen
   tft.fillRect(0, 20, SCREEN_WIDTH, SCREEN_HEIGHT, BG_Colour);
 
-  // Draw score
   tft.setTextSize(2);
   tft.setTextColor(FG1_Colour);
   tft.setCursor(5, 5);
   tft.print("Score: ");
   tft.print(score);
 
-
-  // Draw stars
   for (int i = 0; i < MAX_STARS; i++) {
     tft.fillRect((int)stars[i].x, (int)stars[i].y, 2, 2, starColor);
   }
 
-  // Draw horizon and hills
   tft.drawLine(0, horizonY, SCREEN_WIDTH, horizonY, FG2_Colour);
   drawHills();
 
-  // Draw ship
   float rad = shipAngle + radians(90);
   int x1 = shipX + cos(rad) * 10;
   int y1 = shipY + sin(rad) * 10;
